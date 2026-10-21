@@ -10,10 +10,11 @@
     "preview": "astro preview"
   },
   "keywords": [],
-  "author": "",
+  "author": "Bandhan Das",
+  "organization": "BandhanNova Ecosystem",
   "license": "ISC",
   "dependencies": {
-    "astro": "^7.4.1",
+    "astro": "^5.18.2",
     "pdfjs-dist": "^6.4.299"
   }
 }

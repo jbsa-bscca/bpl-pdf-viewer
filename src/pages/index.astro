@@ -7,8 +7,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>BPL Players</title>
+    <title>BPL Players PDF Viewer - BandhanNova Ecosystem</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23f59e0b'><circle cx='12' cy='12' r='10'/></svg>" />
+    <meta name="author" content="Bandhan Das" />
+    <meta name="org" content="BandhanNova Ecosystem" />
+    <meta name="organization" content="BandhanNova Ecosystem" />
+    <meta name="publisher" content="BandhanNova Ecosystem" />
+    <meta property="og:site_name" content="BandhanNova Ecosystem" />
+    <meta property="og:title" content="BPL Players PDF Viewer - BandhanNova Ecosystem" />
     <meta name="theme-color" content="#000000" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -264,6 +270,36 @@
       @keyframes spin {
         to { transform: rotate(360deg); }
       }
+
+      /* BandhanNova Ecosystem Brand Toast */
+      #brand-toast {
+        position: absolute;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%) translateY(12px);
+        background: rgba(17, 24, 39, 0.92);
+        border: 1px solid rgba(245, 158, 11, 0.5);
+        color: #f59e0b;
+        padding: 8px 20px;
+        border-radius: 30px;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.8px;
+        text-transform: uppercase;
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        box-shadow: 0 6px 25px rgba(0, 0, 0, 0.8), 0 0 15px rgba(245, 158, 11, 0.3);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        z-index: 120;
+        white-space: nowrap;
+      }
+
+      #brand-toast.visible {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
     </style>
   </head>
   <body>
@@ -317,7 +353,7 @@
                 type="text"
                 inputmode="numeric"
                 pattern="[0-9]*"
-                placeholder="Page (1 - 137)..."
+                placeholder="Page (1 - 138)..."
                 autocomplete="off"
               />
               <button id="search-go-btn">
@@ -352,6 +388,9 @@
 
       <!-- Spinner -->
       <div id="loader"></div>
+
+      <!-- BandhanNova Ecosystem Watermark Toast (Appears on page change for 1 second) -->
+      <div id="brand-toast">BandhanNova Ecosystem</div>
     </div>
 
     <!-- PDF.js Client Script -->
@@ -361,7 +400,7 @@
 
       let pdfDoc = null;
       let currentPage = 1;
-      let totalPages = 137;
+      let totalPages = 138;
       let pageRendering = false;
       let pageNumPending = null;
       let currentRenderTask = null;
@@ -369,6 +408,18 @@
       const canvas = document.getElementById('pdf-canvas');
       const ctx = canvas.getContext('2d', { alpha: false });
       const loader = document.getElementById('loader');
+      const brandToast = document.getElementById('brand-toast');
+      let brandToastTimer = null;
+
+      function triggerBrandToast() {
+        if (!brandToast) return;
+        brandToast.classList.add('visible');
+        clearTimeout(brandToastTimer);
+        brandToastTimer = setTimeout(() => {
+          brandToast.classList.remove('visible');
+        }, 1000);
+      }
+
       const fsBtn = document.getElementById('fs-btn');
       const fsEnterIcon = document.getElementById('fs-enter-icon');
       const fsExitIcon = document.getElementById('fs-exit-icon');
@@ -403,6 +454,7 @@
 
           pdfDoc = await loadingTask.promise;
           totalPages = pdfDoc.numPages;
+          searchInput.placeholder = `Page (1 - ${totalPages})...`;
 
           // Check if URL has hash (e.g. #25)
           const hashVal = parseInt(window.location.hash.replace('#', ''), 10);
@@ -461,6 +513,7 @@
           loader.classList.add('hidden');
           window.history.replaceState(null, '', `#${num}`);
           updateNavButtons();
+          triggerBrandToast();
 
           if (pageNumPending !== null) {
             const next = pageNumPending;
