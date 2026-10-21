@@ -50,6 +50,7 @@
         align-items: center;
         background: #000000;
         overflow: hidden;
+        touch-action: none;
       }
 
       /* PDF Canvas Wrapper */
@@ -61,6 +62,7 @@
         justify-content: center;
         align-items: center;
         overflow: hidden;
+        touch-action: none;
       }
 
       #pdf-canvas {
@@ -72,27 +74,10 @@
         object-fit: contain;
         display: block;
         background: #000;
-        /* Ensure canvas is strictly upright and never inverted */
-        transform: none !important;
+        transform-origin: center center;
+        will-change: transform;
+        touch-action: none;
         image-rendering: -webkit-optimize-contrast;
-      }
-
-      /* Tap navigation zones on mobile */
-      .tap-zone {
-        position: absolute;
-        top: 60px;
-        bottom: 60px;
-        width: 25%;
-        z-index: 10;
-        cursor: pointer;
-      }
-
-      #tap-left {
-        left: 0;
-      }
-
-      #tap-right {
-        right: 0;
       }
 
       /* Top Header Controls */
@@ -280,15 +265,15 @@
         background: rgba(17, 24, 39, 0.90);
         border: 1px solid rgba(245, 158, 11, 0.45);
         color: #f59e0b;
-        padding: 6px 18px;
-        border-radius: 20px;
-        font-size: 13px;
+        padding: 5px 14px;
+        border-radius: 16px;
+        font-size: 11px;
         font-weight: 700;
-        letter-spacing: 0.8px;
+        letter-spacing: 0.6px;
         text-transform: uppercase;
         backdrop-filter: blur(14px);
         -webkit-backdrop-filter: blur(14px);
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.75), 0 0 12px rgba(245, 158, 11, 0.25);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.75), 0 0 10px rgba(245, 158, 11, 0.2);
         opacity: 0;
         pointer-events: none;
         transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
@@ -310,14 +295,14 @@
         background: rgba(17, 24, 39, 0.92);
         border: 1px solid rgba(245, 158, 11, 0.5);
         color: #f59e0b;
-        padding: 6px 18px;
-        border-radius: 20px;
-        font-size: 13px;
+        padding: 5px 16px;
+        border-radius: 16px;
+        font-size: 12px;
         font-weight: 700;
-        letter-spacing: 0.8px;
+        letter-spacing: 0.6px;
         backdrop-filter: blur(14px);
         -webkit-backdrop-filter: blur(14px);
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.75), 0 0 15px rgba(245, 158, 11, 0.3);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.75), 0 0 12px rgba(245, 158, 11, 0.25);
         opacity: 0;
         pointer-events: none;
         transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
@@ -405,15 +390,11 @@
           </button>
         </div>
       </header>
-
-      <!-- Invisible tap zones for easy mobile page flipping -->
-      <div id="tap-left" class="tap-zone" aria-label="Previous Page"></div>
-      <div id="tap-right" class="tap-zone" aria-label="Next Page"></div>
-
-      <!-- Main PDF Canvas -->
-      <div id="canvas-wrapper">
-        <canvas id="pdf-canvas"></canvas>
-      </div>
+ 
+       <!-- Main PDF Canvas -->
+       <div id="canvas-wrapper">
+         <canvas id="pdf-canvas"></canvas>
+       </div>
 
       <!-- Spinner -->
       <div id="loader"></div>
@@ -462,8 +443,6 @@
       const searchCloseBtn = document.getElementById('search-close-btn');
       const prevBtn = document.getElementById('prev-btn');
       const nextBtn = document.getElementById('next-btn');
-      const tapLeft = document.getElementById('tap-left');
-      const tapRight = document.getElementById('tap-right');
 
       function updateNavButtons() {
         if (currentPage <= 1) {
@@ -702,7 +681,7 @@
         }, 1000); // 1 second auto-disappear
       }
 
-      // 2-FINGER PINCH-TO-ZOOM & PAN CONTROLS
+      // 2-FINGER PINCH-TO-ZOOM, PAN & SWIPE CONTROLS
       let zoomScale = 1.0;
       const MIN_ZOOM = 1.0;
       const MAX_ZOOM = 3.5;
@@ -714,7 +693,10 @@
       let initialPinchDist = 0;
       let initialPinchScale = 1.0;
       let lastTapTime = 0;
+      let startX = 0;
+      let startY = 0;
 
+      const appContainer = document.getElementById('app-container');
       const canvasWrapper = document.getElementById('canvas-wrapper');
 
       function applyZoomTransform(animate = true, showBadge = true) {
@@ -722,15 +704,17 @@
           zoomScale = 1.0;
           panX = 0;
           panY = 0;
-          canvas.style.transition = animate ? 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)' : 'none';
-          canvas.style.transform = 'none';
+          canvas.style.transition = animate ? 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)' : 'none';
+          canvas.style.transform = 'translate3d(0px, 0px, 0px) scale(1)';
         } else {
-          const maxPanX = (canvas.offsetWidth * (zoomScale - 1)) / 2;
-          const maxPanY = (canvas.offsetHeight * (zoomScale - 1)) / 2;
+          // Allow panning so all parts of the cricket player card can be viewed
+          const maxPanX = Math.max(0, (canvas.offsetWidth * (zoomScale - 1)) / 2 + 30);
+          const maxPanY = Math.max(0, (canvas.offsetHeight * (zoomScale - 1)) / 2 + 30);
           panX = Math.max(-maxPanX, Math.min(maxPanX, panX));
           panY = Math.max(-maxPanY, Math.min(maxPanY, panY));
+
           canvas.style.transition = animate ? 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)' : 'none';
-          canvas.style.transform = `scale(${zoomScale}) translate(${panX / zoomScale}px, ${panY / zoomScale}px)`;
+          canvas.style.transform = `translate3d(${panX}px, ${panY}px, 0px) scale(${zoomScale})`;
         }
         if (showBadge) {
           triggerZoomBadge();
@@ -744,37 +728,32 @@
         applyZoomTransform(true, false);
       }
 
-      // MOBILE TOUCH NAVIGATION & TAP ZONES
-      tapLeft.addEventListener('click', () => {
-        if (zoomScale > 1.0) return;
-        if (currentPage > 1) queueRender(currentPage - 1);
-      });
+      // TOUCH LISTENERS ON ENTIRE SCREEN (APP CONTAINER)
+      appContainer.addEventListener('touchstart', (e) => {
+        // Let clicks on header controls work normally
+        if (e.target && e.target.closest && e.target.closest('#header-bar')) {
+          return;
+        }
 
-      tapRight.addEventListener('click', () => {
-        if (zoomScale > 1.0) return;
-        if (currentPage < totalPages) queueRender(currentPage + 1);
-      });
-
-      // PINCH-TO-ZOOM, PAN & SWIPE GESTURES
-      let startX = 0;
-      let startY = 0;
-
-      canvasWrapper.addEventListener('touchstart', (e) => {
         if (e.touches.length === 2) {
+          // 2-Finger Pinch Start
+          e.preventDefault();
           initialPinchDist = Math.hypot(
             e.touches[0].clientX - e.touches[1].clientX,
             e.touches[0].clientY - e.touches[1].clientY
           );
           initialPinchScale = zoomScale;
+          isPanning = false;
         } else if (e.touches.length === 1) {
+          // Double-tap detection
           const now = Date.now();
           if (now - lastTapTime < 300) {
             e.preventDefault();
-            if (zoomScale > 1.0) {
+            if (zoomScale > 1.05) {
               resetZoom();
             } else {
-              zoomScale = 1.8;
-              applyZoomTransform(true);
+              zoomScale = 2.0;
+              applyZoomTransform(true, true);
             }
             lastTapTime = 0;
             return;
@@ -786,13 +765,17 @@
             panStartX = e.touches[0].clientX - panX;
             panStartY = e.touches[0].clientY - panY;
           } else {
-            startX = e.touches[0].screenX;
-            startY = e.touches[0].screenY;
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
           }
         }
       }, { passive: false });
 
-      canvasWrapper.addEventListener('touchmove', (e) => {
+      appContainer.addEventListener('touchmove', (e) => {
+        if (e.target && e.target.closest && e.target.closest('#header-bar')) {
+          return;
+        }
+
         if (e.touches.length === 2) {
           e.preventDefault();
           const currentDist = Math.hypot(
@@ -802,29 +785,40 @@
           if (initialPinchDist > 0) {
             const factor = currentDist / initialPinchDist;
             zoomScale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, +(initialPinchScale * factor).toFixed(2)));
-            applyZoomTransform(false);
+            applyZoomTransform(false, true);
           }
         } else if (e.touches.length === 1 && isPanning && zoomScale > 1.0) {
           e.preventDefault();
           panX = e.touches[0].clientX - panStartX;
           panY = e.touches[0].clientY - panStartY;
-          applyZoomTransform(false);
+          applyZoomTransform(false, false);
         }
       }, { passive: false });
 
-      canvasWrapper.addEventListener('touchend', (e) => {
+      appContainer.addEventListener('touchend', (e) => {
+        if (e.target && e.target.closest && e.target.closest('#header-bar')) {
+          return;
+        }
+
         if (e.touches.length < 2) {
           initialPinchDist = 0;
         }
-        if (e.touches.length === 0) {
+
+        if (e.touches.length === 1 && zoomScale > 1.0) {
+          // Transitioned from 2-finger pinch to 1-finger pan
+          isPanning = true;
+          panStartX = e.touches[0].clientX - panX;
+          panStartY = e.touches[0].clientY - panY;
+        } else if (e.touches.length === 0) {
           if (isPanning) {
             isPanning = false;
-            applyZoomTransform(true);
-          } else if (zoomScale <= 1.0 && startX !== 0) {
-            const diffX = e.changedTouches[0].screenX - startX;
-            const diffY = e.changedTouches[0].screenY - startY;
+            applyZoomTransform(true, false);
+          } else if (zoomScale <= 1.0 && startX !== 0 && e.changedTouches && e.changedTouches.length > 0) {
+            const diffX = e.changedTouches[0].clientX - startX;
+            const diffY = e.changedTouches[0].clientY - startY;
 
-            if (Math.abs(diffX) > 50 && Math.abs(diffY) < 60) {
+            // Horizontal swipe to flip pages
+            if (Math.abs(diffX) > 40 && Math.abs(diffY) < 60) {
               if (diffX < 0 && currentPage < totalPages) {
                 queueRender(currentPage + 1); // Swipe left = Next
               } else if (diffX > 0 && currentPage > 1) {
@@ -832,9 +826,20 @@
               }
             }
             startX = 0;
+            startY = 0;
           }
         }
       });
+
+      // Trackpad / Wheel zoom support
+      appContainer.addEventListener('wheel', (e) => {
+        if (e.ctrlKey) {
+          e.preventDefault();
+          const delta = -e.deltaY * 0.01;
+          zoomScale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, +(zoomScale + delta).toFixed(2)));
+          applyZoomTransform(false, true);
+        }
+      }, { passive: false });
 
       // Orientation and Resize Handler
       window.addEventListener('resize', () => {
