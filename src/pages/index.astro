@@ -1,0 +1,650 @@
+---
+// BPL Registered Players - Clean Mobile PDF Viewer
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>BPL Players</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23f59e0b'><circle cx='12' cy='12' r='10'/></svg>" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <style>
+      *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #000000;
+        color: #ffffff;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        user-select: none;
+        touch-action: pan-y;
+      }
+
+      /* Fullscreen App Container */
+      #app-container {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+        height: 100dvh; /* Dynamic viewport height for mobile browsers */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: #000000;
+        overflow: hidden;
+      }
+
+      /* PDF Canvas Wrapper */
+      #canvas-wrapper {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+      }
+
+      #pdf-canvas {
+        max-width: 100vw;
+        max-height: 100vh;
+        max-height: 100dvh;
+        width: auto;
+        height: auto;
+        object-fit: contain;
+        display: block;
+        background: #000;
+        /* Ensure canvas is strictly upright and never inverted */
+        transform: none !important;
+        image-rendering: -webkit-optimize-contrast;
+      }
+
+      /* Tap navigation zones on mobile */
+      .tap-zone {
+        position: absolute;
+        top: 60px;
+        bottom: 60px;
+        width: 25%;
+        z-index: 10;
+        cursor: pointer;
+      }
+
+      #tap-left {
+        left: 0;
+      }
+
+      #tap-right {
+        right: 0;
+      }
+
+      /* Top Header Controls */
+      #header-bar {
+        position: absolute;
+        top: env(safe-area-inset-top, 14px);
+        left: 0;
+        right: 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding: 12px 16px;
+        z-index: 100;
+        pointer-events: none; /* Let clicks pass through except on buttons */
+      }
+
+      .control-column {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        pointer-events: auto;
+      }
+
+      .left-column {
+        align-items: flex-start;
+      }
+
+      .right-column {
+        align-items: flex-end;
+      }
+
+      .btn-icon {
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        background: rgba(20, 24, 33, 0.75);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+        pointer-events: auto;
+        transition: transform 0.2s ease, background 0.2s ease, opacity 0.2s ease;
+        outline: none;
+      }
+
+      .btn-icon:active {
+        transform: scale(0.92);
+        background: rgba(245, 158, 11, 0.9);
+        color: #000;
+      }
+
+      .nav-arrow-btn.disabled {
+        opacity: 0.35;
+        pointer-events: none;
+      }
+
+      /* Search Widget ("search button dabale boro hobe") */
+      #search-container {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        pointer-events: auto;
+      }
+
+      #search-toggle-btn {
+        display: flex;
+      }
+
+      /* Expanded Search Bar */
+      #search-box {
+        display: none;
+        background: rgba(17, 24, 39, 0.95);
+        border: 1px solid rgba(245, 158, 11, 0.6);
+        border-radius: 30px;
+        padding: 4px 8px 4px 16px;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.8), 0 0 15px rgba(245, 158, 11, 0.3);
+        align-items: center;
+        gap: 8px;
+        animation: expand 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+
+      #search-box.active {
+        display: flex;
+      }
+
+      @keyframes expand {
+        from {
+          opacity: 0;
+          transform: scale(0.85);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      #search-input {
+        background: transparent;
+        border: none;
+        outline: none;
+        color: #ffffff;
+        font-size: 16px; /* 16px prevents iOS auto-zoom */
+        font-weight: 600;
+        width: 140px;
+        padding: 6px 0;
+      }
+
+      #search-input::placeholder {
+        color: #9ca3af;
+        font-size: 13px;
+        font-weight: 400;
+      }
+
+      #search-go-btn {
+        background: #f59e0b;
+        color: #000000;
+        border: none;
+        border-radius: 20px;
+        padding: 8px 14px;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      #search-go-btn:active {
+        transform: scale(0.95);
+      }
+
+      #search-close-btn {
+        background: transparent;
+        border: none;
+        color: #9ca3af;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+      }
+
+      /* Subtle Loader */
+      #loader {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 44px;
+        height: 44px;
+        border: 4px solid rgba(245, 158, 11, 0.2);
+        border-top-color: #f59e0b;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        z-index: 50;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+      }
+
+      #loader.hidden {
+        opacity: 0;
+        visibility: hidden;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app-container">
+      <!-- Top Header Bar: Left Column (Fullscreen + Left Arrow), Right Column (Search + Right Arrow) -->
+      <header id="header-bar">
+        <!-- Left Column: Fullscreen + Left Arrow -->
+        <div class="control-column left-column">
+          <!-- Button 1: Fullscreen / Small screen toggle -->
+          <button id="fs-btn" class="btn-icon" aria-label="Toggle Fullscreen">
+            <!-- Fullscreen Enter Icon -->
+            <svg id="fs-enter-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="15 3 21 3 21 9"></polyline>
+              <polyline points="9 21 3 21 3 15"></polyline>
+              <line x1="21" y1="3" x2="14" y2="10"></line>
+              <line x1="3" y1="21" x2="10" y2="14"></line>
+            </svg>
+            <!-- Fullscreen Exit / Small screen Icon -->
+            <svg id="fs-exit-icon" style="display:none;" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="4 14 10 14 10 20"></polyline>
+              <polyline points="20 10 14 10 14 4"></polyline>
+              <line x1="14" y1="10" x2="21" y2="3"></line>
+              <line x1="3" y1="21" x2="10" y2="14"></line>
+            </svg>
+          </button>
+
+          <!-- Left Arrow Button (Underneath Fullscreen button) -->
+          <button id="prev-btn" class="btn-icon nav-arrow-btn" aria-label="Previous Page">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Right Column: Search + Right Arrow -->
+        <div class="control-column right-column">
+          <!-- Button 2: Search Button in corner ("search button boro hobe") -->
+          <div id="search-container">
+            <!-- Collapsed Icon Button -->
+            <button id="search-toggle-btn" class="btn-icon" aria-label="Search Page">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+            </button>
+
+            <!-- Expanded Search Bar -->
+            <div id="search-box">
+              <input
+                id="search-input"
+                type="text"
+                inputmode="numeric"
+                pattern="[0-9]*"
+                placeholder="Page (1 - 137)..."
+                autocomplete="off"
+              />
+              <button id="search-go-btn">
+                <span>Go</span>
+              </button>
+              <button id="search-close-btn" aria-label="Close Search">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Right Arrow Button (Underneath Search button) -->
+          <button id="next-btn" class="btn-icon nav-arrow-btn" aria-label="Next Page">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Invisible tap zones for easy mobile page flipping -->
+      <div id="tap-left" class="tap-zone" aria-label="Previous Page"></div>
+      <div id="tap-right" class="tap-zone" aria-label="Next Page"></div>
+
+      <!-- Main PDF Canvas -->
+      <div id="canvas-wrapper">
+        <canvas id="pdf-canvas"></canvas>
+      </div>
+
+      <!-- Spinner -->
+      <div id="loader"></div>
+    </div>
+
+    <!-- PDF.js Client Script -->
+    <script>
+      import * as pdfjsLib from 'pdfjs-dist';
+      pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+
+      let pdfDoc = null;
+      let currentPage = 1;
+      let totalPages = 137;
+      let pageRendering = false;
+      let pageNumPending = null;
+      let currentRenderTask = null;
+
+      const canvas = document.getElementById('pdf-canvas');
+      const ctx = canvas.getContext('2d', { alpha: false });
+      const loader = document.getElementById('loader');
+      const fsBtn = document.getElementById('fs-btn');
+      const fsEnterIcon = document.getElementById('fs-enter-icon');
+      const fsExitIcon = document.getElementById('fs-exit-icon');
+      const searchToggleBtn = document.getElementById('search-toggle-btn');
+      const searchBox = document.getElementById('search-box');
+      const searchInput = document.getElementById('search-input');
+      const searchGoBtn = document.getElementById('search-go-btn');
+      const searchCloseBtn = document.getElementById('search-close-btn');
+      const prevBtn = document.getElementById('prev-btn');
+      const nextBtn = document.getElementById('next-btn');
+      const tapLeft = document.getElementById('tap-left');
+      const tapRight = document.getElementById('tap-right');
+
+      function updateNavButtons() {
+        if (currentPage <= 1) {
+          prevBtn.classList.add('disabled');
+        } else {
+          prevBtn.classList.remove('disabled');
+        }
+        if (currentPage >= totalPages) {
+          nextBtn.classList.add('disabled');
+        } else {
+          nextBtn.classList.remove('disabled');
+        }
+      }
+
+      async function init() {
+        try {
+          const loadingTask = pdfjsLib.getDocument({
+            url: '/BPL_Registered_Players.pdf',
+          });
+
+          pdfDoc = await loadingTask.promise;
+          totalPages = pdfDoc.numPages;
+
+          // Check if URL has hash (e.g. #25)
+          const hashVal = parseInt(window.location.hash.replace('#', ''), 10);
+          if (!isNaN(hashVal) && hashVal >= 1 && hashVal <= totalPages) {
+            currentPage = hashVal;
+          }
+
+          renderPage(currentPage);
+        } catch (err) {
+          console.error('PDF error:', err);
+        }
+      }
+
+      async function renderPage(num) {
+        if (!pdfDoc) return;
+
+        if (currentRenderTask) {
+          currentRenderTask.cancel();
+        }
+
+        pageRendering = true;
+
+        try {
+          const page = await pdfDoc.getPage(num);
+
+          // Force strictly upright portrait orientation (rotation: 0)
+          const viewportUnscaled = page.getViewport({ scale: 1.0, rotation: 0 });
+
+          // Calculate exact aspect fit for mobile viewport
+          const screenW = window.innerWidth;
+          const screenH = window.innerHeight;
+
+          const scaleX = screenW / viewportUnscaled.width;
+          const scaleY = screenH / viewportUnscaled.height;
+          const scale = Math.min(scaleX, scaleY);
+
+          // High DPI for crisp mobile display
+          const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+          const viewport = page.getViewport({ scale: scale * dpr, rotation: 0 });
+
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          canvas.style.width = `${Math.floor(viewport.width / dpr)}px`;
+          canvas.style.height = `${Math.floor(viewport.height / dpr)}px`;
+
+          const renderContext = {
+            canvasContext: ctx,
+            viewport: viewport,
+          };
+
+          currentRenderTask = page.render(renderContext);
+          await currentRenderTask.promise;
+          currentRenderTask = null;
+
+          pageRendering = false;
+          loader.classList.add('hidden');
+          window.history.replaceState(null, '', `#${num}`);
+          updateNavButtons();
+
+          if (pageNumPending !== null) {
+            const next = pageNumPending;
+            pageNumPending = null;
+            renderPage(next);
+          }
+        } catch (err) {
+          if (err && (err.name === 'RenderingCancelledException' || err.message?.includes('cancelled'))) {
+            return;
+          }
+          console.error(err);
+          pageRendering = false;
+        }
+      }
+
+      function queueRender(num) {
+        if (num < 1) num = 1;
+        if (num > totalPages) num = totalPages;
+        currentPage = num;
+
+        if (pageRendering) {
+          pageNumPending = num;
+        } else {
+          renderPage(num);
+        }
+      }
+
+      // 1. FULLSCREEN / SMALL SCREEN BUTTON
+      function isFullscreen() {
+        return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+      }
+
+      function toggleFullscreen() {
+        if (!isFullscreen()) {
+          const docEl = document.documentElement;
+          if (docEl.requestFullscreen) {
+            docEl.requestFullscreen().catch(() => {});
+          } else if (docEl.webkitRequestFullscreen) {
+            docEl.webkitRequestFullscreen();
+          }
+        } else {
+          if (document.exitFullscreen) {
+            document.exitFullscreen().catch(() => {});
+          } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+          }
+        }
+      }
+
+      function updateFsUI() {
+        const inFs = isFullscreen();
+        if (inFs) {
+          fsEnterIcon.style.display = 'none';
+          fsExitIcon.style.display = 'block';
+        } else {
+          fsEnterIcon.style.display = 'block';
+          fsExitIcon.style.display = 'none';
+        }
+        // Re-render strictly upright
+        setTimeout(() => {
+          renderPage(currentPage);
+        }, 150);
+      }
+
+      fsBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleFullscreen();
+      });
+
+      document.addEventListener('fullscreenchange', updateFsUI);
+      document.addEventListener('webkitfullscreenchange', updateFsUI);
+
+      // 2. SEARCH BUTTON (Expands on click)
+      function openSearch() {
+        searchToggleBtn.style.display = 'none';
+        searchBox.classList.add('active');
+        searchInput.value = '';
+        setTimeout(() => searchInput.focus(), 80);
+      }
+
+      function closeSearch() {
+        searchBox.classList.remove('active');
+        searchToggleBtn.style.display = 'flex';
+      }
+
+      function doSearch() {
+        const raw = searchInput.value.trim();
+        const match = raw.match(/\d+/);
+        const pageNum = match ? parseInt(match[0], 10) : NaN;
+
+        if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
+          queueRender(pageNum);
+          closeSearch();
+        } else {
+          searchInput.style.outline = '2px solid #ef4444';
+          setTimeout(() => { searchInput.style.outline = 'none'; }, 1000);
+        }
+      }
+
+      searchToggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openSearch();
+      });
+
+      searchCloseBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeSearch();
+      });
+
+      searchGoBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        doSearch();
+      });
+
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          doSearch();
+        } else if (e.key === 'Escape') {
+          closeSearch();
+        }
+      });
+
+      // Close search when clicking outside
+      document.addEventListener('click', (e) => {
+        if (searchBox.classList.contains('active') && !searchBox.contains(e.target) && !searchToggleBtn.contains(e.target)) {
+          closeSearch();
+        }
+      });
+
+      // PREVIOUS / NEXT ARROW BUTTONS
+      prevBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (currentPage > 1) queueRender(currentPage - 1);
+      });
+
+      nextBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (currentPage < totalPages) queueRender(currentPage + 1);
+      });
+
+      // MOBILE TOUCH NAVIGATION
+      // Tap Left = Prev, Tap Right = Next
+      tapLeft.addEventListener('click', () => {
+        if (currentPage > 1) queueRender(currentPage - 1);
+      });
+
+      tapRight.addEventListener('click', () => {
+        if (currentPage < totalPages) queueRender(currentPage + 1);
+      });
+
+      // Mobile Swipe Gesture
+      let startX = 0;
+      let startY = 0;
+
+      window.addEventListener('touchstart', (e) => {
+        startX = e.changedTouches[0].screenX;
+        startY = e.changedTouches[0].screenY;
+      }, { passive: true });
+
+      window.addEventListener('touchend', (e) => {
+        const diffX = e.changedTouches[0].screenX - startX;
+        const diffY = e.changedTouches[0].screenY - startY;
+
+        if (Math.abs(diffX) > 50 && Math.abs(diffY) < 60) {
+          if (diffX < 0 && currentPage < totalPages) {
+            queueRender(currentPage + 1); // Swipe left = Next
+          } else if (diffX > 0 && currentPage > 1) {
+            queueRender(currentPage - 1); // Swipe right = Prev
+          }
+        }
+      }, { passive: true });
+
+      // Orientation and Resize Handler
+      window.addEventListener('resize', () => {
+        renderPage(currentPage);
+      });
+
+      window.addEventListener('orientationchange', () => {
+        setTimeout(() => renderPage(currentPage), 200);
+      });
+
+      // Start app
+      init();
+    </script>
+  </body>
+</html>
