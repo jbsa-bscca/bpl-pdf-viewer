@@ -1,6 +1,6 @@
 # BPL Registered Players - Web Viewer
 
-An ultra-fast, immersive PDF viewer built with **Astro** for hosting on **Cloudflare Pages**.
+An ultra-fast, mobile-first PDF viewer built with **Astro 5** for hosting on **Cloudflare Pages**.
 Designed for a smooth, distraction-free viewing experience with **CrazyGames-style full screen HUD** and **expanding quick search**.
 
 ---
