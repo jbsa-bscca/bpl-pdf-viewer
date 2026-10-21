@@ -167,18 +167,18 @@
         display: flex;
       }
 
-      /* Expanded Search Modal ("modal ta ektu boro koro") */
+      /* Expanded Search Bar */
       #search-box {
         display: none;
-        background: rgba(17, 24, 39, 0.97);
-        border: 1.5px solid rgba(245, 158, 11, 0.75);
-        border-radius: 40px;
-        padding: 8px 12px 8px 20px;
-        backdrop-filter: blur(24px);
-        -webkit-backdrop-filter: blur(24px);
-        box-shadow: 0 14px 45px rgba(0, 0, 0, 0.9), 0 0 25px rgba(245, 158, 11, 0.35);
+        background: rgba(17, 24, 39, 0.95);
+        border: 1px solid rgba(245, 158, 11, 0.6);
+        border-radius: 30px;
+        padding: 4px 8px 4px 16px;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.8), 0 0 15px rgba(245, 158, 11, 0.3);
         align-items: center;
-        gap: 12px;
+        gap: 8px;
         animation: expand 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
       }
 
@@ -189,7 +189,7 @@
       @keyframes expand {
         from {
           opacity: 0;
-          transform: scale(0.9);
+          transform: scale(0.85);
         }
         to {
           opacity: 1;
@@ -202,32 +202,30 @@
         border: none;
         outline: none;
         color: #ffffff;
-        font-size: 18px; /* Clean, bold, easily readable on mobile */
-        font-weight: 700;
-        width: 175px;
-        padding: 8px 0;
-        letter-spacing: 0.3px;
+        font-size: 16px; /* 16px prevents iOS auto-zoom */
+        font-weight: 600;
+        width: 140px;
+        padding: 6px 0;
       }
 
       #search-input::placeholder {
         color: #9ca3af;
-        font-size: 14.5px;
-        font-weight: 500;
+        font-size: 13px;
+        font-weight: 400;
       }
 
       #search-go-btn {
         background: #f59e0b;
         color: #000000;
         border: none;
-        border-radius: 25px;
-        padding: 10px 20px;
-        font-size: 15px;
-        font-weight: 800;
+        border-radius: 20px;
+        padding: 8px 14px;
+        font-size: 13px;
+        font-weight: 700;
         cursor: pointer;
         display: flex;
         align-items: center;
         gap: 4px;
-        box-shadow: 0 2px 10px rgba(245, 158, 11, 0.4);
       }
 
       #search-go-btn:active {
@@ -238,19 +236,13 @@
         background: transparent;
         border: none;
         color: #9ca3af;
-        width: 38px;
-        height: 38px;
+        width: 32px;
+        height: 32px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        transition: background 0.15s ease, color 0.15s ease;
-      }
-
-      #search-close-btn:active {
-        background: rgba(255, 255, 255, 0.15);
-        color: #ffffff;
       }
 
       /* Subtle Loader */
@@ -282,21 +274,21 @@
       /* BandhanNova Ecosystem Brand Toast */
       #brand-toast {
         position: absolute;
-        bottom: 24px;
+        bottom: 28px;
         left: 50%;
         transform: translateX(-50%) translateY(12px);
-        background: rgba(17, 24, 39, 0.92);
-        border: 1px solid rgba(245, 158, 11, 0.5);
+        background: rgba(17, 24, 39, 0.94);
+        border: 1.5px solid rgba(245, 158, 11, 0.65);
         color: #f59e0b;
-        padding: 8px 20px;
-        border-radius: 30px;
-        font-size: 13px;
-        font-weight: 700;
-        letter-spacing: 0.8px;
+        padding: 10px 24px;
+        border-radius: 32px;
+        font-size: 16px;
+        font-weight: 800;
+        letter-spacing: 1.1px;
         text-transform: uppercase;
-        backdrop-filter: blur(14px);
-        -webkit-backdrop-filter: blur(14px);
-        box-shadow: 0 6px 25px rgba(0, 0, 0, 0.8), 0 0 15px rgba(245, 158, 11, 0.3);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.85), 0 0 20px rgba(245, 158, 11, 0.35);
         opacity: 0;
         pointer-events: none;
         transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
