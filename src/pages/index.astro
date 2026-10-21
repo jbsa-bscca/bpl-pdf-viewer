@@ -274,7 +274,7 @@
       /* BandhanNova Ecosystem Brand Toast */
       #brand-toast {
         position: absolute;
-        bottom: 28px;
+        bottom: 74px;
         left: 50%;
         transform: translateX(-50%) translateY(12px);
         background: rgba(17, 24, 39, 0.94);
@@ -299,6 +299,57 @@
       #brand-toast.visible {
         opacity: 1;
         transform: translateX(-50%) translateY(0);
+      }
+
+      /* Floating Bottom Zoom Bar */
+      #zoom-bar {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(20, 24, 33, 0.82);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        padding: 4px 10px;
+        border-radius: 30px;
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+        z-index: 100;
+        pointer-events: auto;
+      }
+
+      .zoom-btn {
+        background: transparent;
+        border: none;
+        color: #ffffff;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: transform 0.15s ease, background 0.15s ease;
+        outline: none;
+      }
+
+      .zoom-btn:active {
+        transform: scale(0.9);
+        background: rgba(245, 158, 11, 0.35);
+        color: #f59e0b;
+      }
+
+      #zoom-text {
+        font-size: 13px;
+        font-weight: 700;
+        color: #f59e0b;
+        min-width: 44px;
+        text-align: center;
+        cursor: pointer;
+        user-select: none;
       }
     </style>
   </head>
@@ -391,6 +442,22 @@
 
       <!-- BandhanNova Ecosystem Watermark Toast (Appears on page change for 1 second) -->
       <div id="brand-toast">BandhanNova Ecosystem</div>
+
+      <!-- Floating Bottom Zoom Bar -->
+      <div id="zoom-bar">
+        <button id="zoom-out-btn" class="zoom-btn" aria-label="Zoom Out">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </button>
+        <span id="zoom-text" aria-label="Reset Zoom">100%</span>
+        <button id="zoom-in-btn" class="zoom-btn" aria-label="Zoom In">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </button>
+      </div>
     </div>
 
     <!-- PDF.js Client Script -->
@@ -514,6 +581,7 @@
           window.history.replaceState(null, '', `#${num}`);
           updateNavButtons();
           triggerBrandToast();
+          resetZoom();
 
           if (pageNumPending !== null) {
             const next = pageNumPending;
@@ -655,37 +723,166 @@
         if (currentPage < totalPages) queueRender(currentPage + 1);
       });
 
-      // MOBILE TOUCH NAVIGATION
-      // Tap Left = Prev, Tap Right = Next
+      // ZOOM & PAN CONTROLS
+      let zoomScale = 1.0;
+      const MIN_ZOOM = 1.0;
+      const MAX_ZOOM = 3.5;
+      let panX = 0;
+      let panY = 0;
+      let isPanning = false;
+      let panStartX = 0;
+      let panStartY = 0;
+      let initialPinchDist = 0;
+      let initialPinchScale = 1.0;
+      let lastTapTime = 0;
+
+      const zoomBar = document.getElementById('zoom-bar');
+      const zoomInBtn = document.getElementById('zoom-in-btn');
+      const zoomOutBtn = document.getElementById('zoom-out-btn');
+      const zoomText = document.getElementById('zoom-text');
+      const canvasWrapper = document.getElementById('canvas-wrapper');
+
+      function applyZoomTransform(animate = true) {
+        if (zoomScale <= 1.0) {
+          zoomScale = 1.0;
+          panX = 0;
+          panY = 0;
+          canvas.style.transition = animate ? 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)' : 'none';
+          canvas.style.transform = 'none';
+        } else {
+          const maxPanX = (canvas.offsetWidth * (zoomScale - 1)) / 2;
+          const maxPanY = (canvas.offsetHeight * (zoomScale - 1)) / 2;
+          panX = Math.max(-maxPanX, Math.min(maxPanX, panX));
+          panY = Math.max(-maxPanY, Math.min(maxPanY, panY));
+          canvas.style.transition = animate ? 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)' : 'none';
+          canvas.style.transform = `scale(${zoomScale}) translate(${panX / zoomScale}px, ${panY / zoomScale}px)`;
+        }
+        zoomText.textContent = `${Math.round(zoomScale * 100)}%`;
+      }
+
+      function zoomIn() {
+        zoomScale = Math.min(MAX_ZOOM, +(zoomScale + 0.35).toFixed(2));
+        applyZoomTransform(true);
+      }
+
+      function zoomOut() {
+        zoomScale = Math.max(MIN_ZOOM, +(zoomScale - 0.35).toFixed(2));
+        applyZoomTransform(true);
+      }
+
+      function resetZoom() {
+        zoomScale = 1.0;
+        panX = 0;
+        panY = 0;
+        applyZoomTransform(true);
+      }
+
+      zoomInBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        zoomIn();
+      });
+
+      zoomOutBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        zoomOut();
+      });
+
+      zoomText.addEventListener('click', (e) => {
+        e.stopPropagation();
+        resetZoom();
+      });
+
+      // MOBILE TOUCH NAVIGATION & TAP ZONES
       tapLeft.addEventListener('click', () => {
+        if (zoomScale > 1.0) return;
         if (currentPage > 1) queueRender(currentPage - 1);
       });
 
       tapRight.addEventListener('click', () => {
+        if (zoomScale > 1.0) return;
         if (currentPage < totalPages) queueRender(currentPage + 1);
       });
 
-      // Mobile Swipe Gesture
+      // PINCH-TO-ZOOM, PAN & SWIPE GESTURES
       let startX = 0;
       let startY = 0;
 
-      window.addEventListener('touchstart', (e) => {
-        startX = e.changedTouches[0].screenX;
-        startY = e.changedTouches[0].screenY;
-      }, { passive: true });
+      canvasWrapper.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 2) {
+          initialPinchDist = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+          );
+          initialPinchScale = zoomScale;
+        } else if (e.touches.length === 1) {
+          const now = Date.now();
+          if (now - lastTapTime < 300) {
+            e.preventDefault();
+            if (zoomScale > 1.0) {
+              resetZoom();
+            } else {
+              zoomScale = 1.8;
+              applyZoomTransform(true);
+            }
+            lastTapTime = 0;
+            return;
+          }
+          lastTapTime = now;
 
-      window.addEventListener('touchend', (e) => {
-        const diffX = e.changedTouches[0].screenX - startX;
-        const diffY = e.changedTouches[0].screenY - startY;
-
-        if (Math.abs(diffX) > 50 && Math.abs(diffY) < 60) {
-          if (diffX < 0 && currentPage < totalPages) {
-            queueRender(currentPage + 1); // Swipe left = Next
-          } else if (diffX > 0 && currentPage > 1) {
-            queueRender(currentPage - 1); // Swipe right = Prev
+          if (zoomScale > 1.0) {
+            isPanning = true;
+            panStartX = e.touches[0].clientX - panX;
+            panStartY = e.touches[0].clientY - panY;
+          } else {
+            startX = e.touches[0].screenX;
+            startY = e.touches[0].screenY;
           }
         }
-      }, { passive: true });
+      }, { passive: false });
+
+      canvasWrapper.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 2) {
+          e.preventDefault();
+          const currentDist = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+          );
+          if (initialPinchDist > 0) {
+            const factor = currentDist / initialPinchDist;
+            zoomScale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, +(initialPinchScale * factor).toFixed(2)));
+            applyZoomTransform(false);
+          }
+        } else if (e.touches.length === 1 && isPanning && zoomScale > 1.0) {
+          e.preventDefault();
+          panX = e.touches[0].clientX - panStartX;
+          panY = e.touches[0].clientY - panStartY;
+          applyZoomTransform(false);
+        }
+      }, { passive: false });
+
+      canvasWrapper.addEventListener('touchend', (e) => {
+        if (e.touches.length < 2) {
+          initialPinchDist = 0;
+        }
+        if (e.touches.length === 0) {
+          if (isPanning) {
+            isPanning = false;
+            applyZoomTransform(true);
+          } else if (zoomScale <= 1.0 && startX !== 0) {
+            const diffX = e.changedTouches[0].screenX - startX;
+            const diffY = e.changedTouches[0].screenY - startY;
+
+            if (Math.abs(diffX) > 50 && Math.abs(diffY) < 60) {
+              if (diffX < 0 && currentPage < totalPages) {
+                queueRender(currentPage + 1); // Swipe left = Next
+              } else if (diffX > 0 && currentPage > 1) {
+                queueRender(currentPage - 1); // Swipe right = Prev
+              }
+            }
+            startX = 0;
+          }
+        }
+      });
 
       // Orientation and Resize Handler
       window.addEventListener('resize', () => {
